@@ -1,19 +1,25 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 beforeEach(function () {
-    $this->admin = User::create([
-        'id' => Str::uuid(),
+    $userId = Str::uuid();
+    DB::table('users')->insert([
+        'id' => $userId,
         'github_id' => 'admin_id_ver',
         'username' => 'admin_user_ver',
         'email' => 'adminver@insighta.local',
         'role' => 'admin',
         'is_active' => true,
     ]);
-    
-    $this->token = $this->admin->createToken('access')->plainTextToken;
+
+    $this->admin = User::query()->find($userId);
+    [
+        'access_token' => $accessToken,
+    ] = $this->admin->issueTokens();
+    $this->token = $accessToken;
 });
 
 it('rejects export if X-API-Version header is missing', function () {
@@ -38,6 +44,6 @@ it('rejects export if X-API-Version header is invalid', function () {
 it('executes normally if X-API-Version is exactly 1', function () {
     $response = $this->withHeader('Authorization', "Bearer {$this->token}")
                      ->get('/api/profiles/export?format=csv', ['X-API-Version' => '1']);
-                     
+
     $response->assertStatus(200);
 });

@@ -2,21 +2,21 @@
 
 use App\Models\User;
 use Illuminate\Support\Str;
-use Tests\Feature\Logging\LogHelper;
+use Tests\Feature\Logging\LogTestHelper;
 
 beforeEach(function () {
-    LogHelper::flushDatabaseLogs();
-    LogHelper::interceptLogs();
+    LogTestHelper::flushDatabaseLogs();
+    LogTestHelper::interceptLogs();
 });
 
 it('validates each log entry contains strictly method, endpoint, status_code, and response_time', function () {
     $this->getJson('/api/profiles', ['X-API-Version' => '1']);
-    
-    $logs = LogHelper::getAllLogs();
+
+    $logs = LogTestHelper::getAllLogs();
     expect(count($logs))->toBeGreaterThan(0);
-    
+
     $lastLog = end($logs);
-    
+
     expect(array_key_exists('method', $lastLog))->toBeTrue();
     expect(array_key_exists('endpoint', $lastLog))->toBeTrue();
     expect(array_key_exists('status_code', $lastLog))->toBeTrue();
@@ -25,10 +25,10 @@ it('validates each log entry contains strictly method, endpoint, status_code, an
 
 it('ensures response time is structurally accurate (numeric, > 0 ms)', function () {
     $this->getJson('/api/profiles', ['X-API-Version' => '1']);
-    
-    $logs = LogHelper::getAllLogs();
+
+    $logs = LogTestHelper::getAllLogs();
     $lastLog = end($logs);
-    
+
     expect(is_numeric($lastLog['response_time']))->toBeTrue();
     expect((float)$lastLog['response_time'])->toBeGreaterThan(0);
 });
@@ -36,12 +36,12 @@ it('ensures response time is structurally accurate (numeric, > 0 ms)', function 
 it('ensures response time differs across distinct requests (not hardcoded)', function () {
     $this->getJson('/api/profiles', ['X-API-Version' => '1']);
     // Artificial small delay using usleep to stagger times
-    usleep(50000); 
+    usleep(50000);
     $this->getJson('/api/profiles', ['X-API-Version' => '1']);
 
-    $logs = LogHelper::getAllLogs();
+    $logs = LogTestHelper::getAllLogs();
     expect(count($logs))->toBeGreaterThanOrEqual(2);
-    
+
     $log1 = $logs[count($logs)-2];
     $log2 = $logs[count($logs)-1];
 
@@ -57,8 +57,8 @@ it('ensures identical structure and full consistency across all valid or faulty 
     $this->getJson('/api/profiles/search?q=1', ['X-API-Version' => '1']); // 401
     $this->postJson('/api/profiles', [], ['X-API-Version' => '1']); // 401
 
-    $logs = array_slice(LogHelper::getAllLogs(), -2);
-    
+    $logs = array_slice(LogTestHelper::getAllLogs(), -2);
+
     // Test exact structural parity of mapped keys between all log varieties
     $keys1 = array_keys(array_filter($logs[0], fn($k) => in_array($k, ['method', 'endpoint', 'status_code', 'response_time']), ARRAY_FILTER_USE_KEY));
     $keys2 = array_keys(array_filter($logs[1], fn($k) => in_array($k, ['method', 'endpoint', 'status_code', 'response_time']), ARRAY_FILTER_USE_KEY));

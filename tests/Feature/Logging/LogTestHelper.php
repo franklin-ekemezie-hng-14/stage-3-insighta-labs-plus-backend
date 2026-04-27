@@ -7,16 +7,16 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Event;
 
-class LogHelper
+class LogTestHelper
 {
     public static $interceptedLogs = [];
 
-    public static function interceptLogs()
+    public static function interceptLogs(): void
     {
         self::$interceptedLogs = [];
         Event::listen(MessageLogged::class, function (MessageLogged $e) {
             $context = $e->context;
-            
+
             // Decodes if stringified JSON
             if (empty($context) && (str_starts_with($e->message, '{') || str_contains($e->message, '"method"'))) {
                 $decoded = json_decode($e->message, true);
@@ -29,14 +29,14 @@ class LogHelper
         });
     }
 
-    public static function flushDatabaseLogs()
+    public static function flushDatabaseLogs(): void
     {
         if (Schema::hasTable('request_logs')) DB::table('request_logs')->truncate();
         if (Schema::hasTable('api_logs')) DB::table('api_logs')->truncate();
         if (Schema::hasTable('logs')) DB::table('logs')->truncate();
     }
 
-    public static function getAllLogs()
+    public static function getAllLogs(): array
     {
         if (Schema::hasTable('request_logs')) {
             return DB::table('request_logs')->get()->map(fn($item) => (array)$item)->toArray();
@@ -47,21 +47,21 @@ class LogHelper
         return self::$interceptedLogs;
     }
 
-    public static function assertLogExistsForRequest($method, $endpoint, $status)
+    public static function assertLogExistsForRequest($method, $endpoint, $status): void
     {
         $logs = self::getAllLogs();
         $found = false;
 
         foreach ($logs as $log) {
-            if (!empty($log) && 
+            if (!empty($log) &&
                 strtoupper($log['method'] ?? '') === strtoupper($method) &&
                 str_contains($log['endpoint'] ?? '', $endpoint) &&
                 (int)($log['status_code'] ?? 0) === (int)$status) {
-                
+
                 // Fields verification
-                expect(isset($log['response_time']))->toBeTrue();
-                expect((float)$log['response_time'])->toBeGreaterThan(0);
-                
+                expect(isset($log['response_time']))->toBeTrue()
+                    ->and((float)$log['response_time'])->toBeGreaterThan(0);
+
                 $found = true;
                 break;
             }

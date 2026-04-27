@@ -1,21 +1,10 @@
 <?php
 
+use App\Enums\Role;
 use App\Models\User;
-use Illuminate\Support\Str;
 use Laravel\Sanctum\PersonalAccessToken;
+use Laravel\Sanctum\Sanctum;
 
-beforeEach(function () {
-    $this->user = User::create([
-        'id' => Str::uuid(),
-        'github_id' => 'auth_mid',
-        'username' => 'auth_mid_user',
-        'email' => 'auth@insighta.local',
-        'role' => 'admin',
-        'is_active' => true,
-    ]);
-    
-    $this->token = $this->user->createToken('access')->plainTextToken;
-});
 
 it('unauthenticated request to ANY api route fails with 401', function () {
     $endpoints = [
@@ -34,18 +23,28 @@ it('unauthenticated request to ANY api route fails with 401', function () {
 it('invalid token fails with 401', function () {
     $response = $this->withHeader('Authorization', "Bearer invalid_garbage_token")
                      ->getJson('/api/profiles', ['X-API-Version' => '1']);
-                     
+
     $response->assertStatus(401);
 });
 
 it('expired token fails with 401', function () {
-    $dbToken = PersonalAccessToken::findToken($this->token);
+
+    Sanctum::actingAs(
+        $user = User::factory()->create(['role' => Role::ANALYST]),
+        Role::ANALYST->abilities()
+    )->tokens()->first();
+
+    [
+        'access_token' => $token,
+    ] = $user->issueTokens();
+
+
+    $dbToken = PersonalAccessToken::findToken($token);
     $dbToken->created_at = now()->subMinutes(60);
     $dbToken->save();
 
-    $response = $this->withHeader('Authorization', "Bearer {$this->token}")
-                     ->getJson('/api/profiles', ['X-API-Version' => '1']);
-                     
+    $response = $this->getJson('/api/profiles', ['X-API-Version' => '1']);
+
     $response->assertStatus(401);
 });
 

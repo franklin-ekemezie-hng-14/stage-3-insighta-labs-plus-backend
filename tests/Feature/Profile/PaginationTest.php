@@ -1,11 +1,14 @@
 <?php
 
+use App\Enums\Role;
 use App\Models\Profile;
+use App\Models\User;
+use Laravel\Sanctum\Sanctum;
 
 beforeEach(function () {
     for ($i = 1; $i <= 15; $i++) {
-        Profile::create([
-            'name' => "person{$i}",
+        Profile::query()->create([
+            'name' => "person$i",
             'gender' => 'male',
             'gender_probability' => 0.9,
             'age' => 20,
@@ -15,6 +18,11 @@ beforeEach(function () {
             'country_probability' => 0.9
         ]);
     }
+
+    Sanctum::actingAs(
+        User::factory()->create(),
+        Role::ANALYST->abilities()
+    );
 });
 
 it('returns correct pagination structure with default page and limit', function () {
@@ -34,7 +42,7 @@ it('returns correct pagination structure with default page and limit', function 
             'limit' => 10,
             'total' => 15
         ]);
-        
+
     expect(count($response->json('data')))->toBe(10);
 });
 
@@ -55,7 +63,7 @@ it('respects page and limit parameters', function () {
 it('respects max limit of 50', function () {
     // Generate up to 55 to exceed the limit
     for ($i = 16; $i <= 55; $i++) {
-        Profile::create([
+        Profile::query()->create([
             'name' => "person{$i}",
             'gender' => 'male',
             'gender_probability' => 0.9,
@@ -69,8 +77,11 @@ it('respects max limit of 50', function () {
 
     $response = $this->getJson('/api/profiles?limit=100', ['X-API-Version' => '1']);
 
-    $response->assertStatus(200);
-    expect(count($response->json('data')))->toBeLessThanOrEqual(50);
+    $response->assertStatus(422)
+        ->assertJson([
+            'status' => 'error',
+            'message' => 'Invalid query parameters'
+        ]);
 });
 
 it('returns empty array when page is out of bounds safely', function () {

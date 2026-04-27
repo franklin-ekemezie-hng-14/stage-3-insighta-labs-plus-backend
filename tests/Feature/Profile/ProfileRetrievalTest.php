@@ -1,11 +1,23 @@
 <?php
 
+use App\Enums\Role;
 use App\Models\Profile;
+use App\Models\User;
 use Illuminate\Support\Str;
+use Laravel\Sanctum\Sanctum;
+
+beforeEach(function () {
+
+    Sanctum::actingAs(
+        User::factory()->create(),
+        Role::ANALYST->abilities()
+    );
+
+});
 
 it('retrieves a single profile successfully', function () {
-    $profile = Profile::create([
-        'name' => 'emmanuel',
+    $profile = Profile::query()->create([
+        'name' => 'Emmanuel',
         'gender' => 'male',
         'gender_probability' => 0.99,
         'age' => 25,
@@ -15,7 +27,7 @@ it('retrieves a single profile successfully', function () {
         'country_probability' => 0.85
     ]);
 
-    $response = $this->getJson("/api/profiles/{$profile->id}", ['X-API-Version' => '1']);
+    $response = $this->getJson("/api/profiles/$profile->id", ['X-API-Version' => '1']);
 
     $response->assertStatus(200)
         ->assertJsonStructure([
@@ -29,7 +41,7 @@ it('retrieves a single profile successfully', function () {
             'status' => 'success',
             'data' => [
                 'id' => $profile->id,
-                'name' => 'emmanuel',
+                'name' => 'Emmanuel',
                 'gender' => 'male'
             ]
         ]);
@@ -37,7 +49,7 @@ it('retrieves a single profile successfully', function () {
 
 it('returns 404 when retrieving a non-existent profile', function () {
     $fakeId = Str::uuid()->toString();
-    $response = $this->getJson("/api/profiles/{$fakeId}", ['X-API-Version' => '1']);
+    $response = $this->getJson("/api/profiles/$fakeId", ['X-API-Version' => '1']);
 
     $response->assertStatus(404)
         ->assertJson([

@@ -1,11 +1,11 @@
 <?php
 
-use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\PersonalAccessToken;
 
 beforeEach(function () {
-    $this->admin = User::create([
+    $this->admin = DB::table('users')->insert([
         'id' => Str::uuid(),
         'github_id' => 'admin_id_auth',
         'username' => 'admin_user',
@@ -21,7 +21,7 @@ beforeEach(function () {
 
 it('rejects missing token with 401', function () {
     $response = $this->getJson('/api/profiles/export?format=csv', ['X-API-Version' => '1']);
-    
+
     $response->assertStatus(401)
              ->assertJson(['status' => 'error']);
 });
@@ -29,7 +29,7 @@ it('rejects missing token with 401', function () {
 it('rejects invalid token with 401', function () {
     $response = $this->withHeader('Authorization', 'Bearer invalid_garbage_token')
                      ->getJson('/api/profiles/export?format=csv', ['X-API-Version' => '1']);
-                     
+
     $response->assertStatus(401);
 });
 
@@ -40,7 +40,7 @@ it('rejects expired token with 401', function () {
 
     $response = $this->withHeader('Authorization', "Bearer {$this->token}")
                      ->getJson('/api/profiles/export?format=csv', ['X-API-Version' => '1']);
-                     
+
     $response->assertStatus(401);
 });
 
@@ -49,6 +49,6 @@ it('rejects revoked or missing token immediately', function () {
 
     $response = $this->withHeader('Authorization', "Bearer {$this->token}")
                      ->getJson('/api/profiles/export?format=csv', ['X-API-Version' => '1']);
-                     
+
     $response->assertStatus(401);
 });
