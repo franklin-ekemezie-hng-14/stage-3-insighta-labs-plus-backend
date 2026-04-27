@@ -18,8 +18,23 @@ class DatabaseSeeder extends Seeder
         // User::factory(10)->create();
 
         User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+            'github_id' => 'admin_test',
+            'username'  => 'admin_user',
+            'email'     => 'admin_user@example.com',
+            'role'      => 'admin',
+            'is_active' => true,
+        ]);
+
+        User::factory()->create([
+            'github_id' => 'analyst_test',
+            'username'  => 'analyst_user',
+            'email'     => 'analyst_user@example.com',
+            'role'      => 'analyst',
+            'is_active' => true,
+        ]);
+
+        $this->call([
+            ProfileSeeder::class,
         ]);
     }
 }
